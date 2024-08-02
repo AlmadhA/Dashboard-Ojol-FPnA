@@ -21,21 +21,15 @@ def load_excel(file_path):
         model = pd.read_excel(file, engine='openpyxl')
     return model
 
-def list_files_in_directory(dir_path):
-    for root, dirs, files in os.walk(dir_path):
-        st.write(f'Direktori: {root}')
-        for file_name in files:
-            st.write(f'  - {file_name}')
-
-def download_file_from_google_drive(file_id, dest_path):
-    if not os.path.exists(dest_path):
-        url = f"https://drive.google.com/uc?id={file_id}"
-        gdown.download(url, dest_path, quiet=False)
-        with zipfile.ZipFile(dest_path, 'r') as zip_ref:
-            zip_ref.extractall(os.path.dirname(dest_path))
-
 def process_data(all_cab, bulan):
     with tempfile.TemporaryDirectory() as tmpdirname:
+        def download_file_from_google_drive(file_id, dest_path):
+            if not os.path.exists(dest_path):
+                url = f"https://drive.google.com/uc?id={file_id}"
+                gdown.download(url, dest_path, quiet=False)
+                with zipfile.ZipFile(dest_path, 'r') as zip_ref:
+                    zip_ref.extractall(tmpdirname)
+        
         file_id = '1BP3-98cKLKgY3flpsyuhjbE7zXWNSN3V'
         dest_path = f'{tmpdirname}/downloaded_file.zip'
         download_file_from_google_drive(file_id, dest_path)
@@ -53,7 +47,7 @@ def process_data(all_cab, bulan):
                     st.write(f"Error reading {filepath}: {e}")
         if dfs:
             df_merge = pd.concat(dfs, ignore_index=True)
-        
+
         directory = f'{tmpdirname}/Breakdown'
         dfs = []
         for filename in os.listdir(directory):
@@ -86,24 +80,8 @@ def process_data(all_cab, bulan):
         
         df_merge['KAT'] = df_merge['KAT'].str.upper()
 
-        kat_pengurang = ['Invoice Beda Hari',
-                         'Transaksi Kemarin',
-                         'Selisih IT',
-                         'Promo Marketing/Adjustment',
-                         'Cancel Nota',
-                         'Tidak Ada Transaksi di Web',
-                         'Selisih Lebih Bayar QRIS',
-                         'Selisih Lebih Bayar Ojol',
-                         'Salah Slot Pembayaran']
-        kat_diperiksa = ['Tidak Ada Invoice QRIS',
-                         'Tidak Ada Invoice Ojol',
-                         'Double Input',
-                         'Selisih Kurang Bayar QRIS',
-                         'Selisih Kurang Bayar Ojol',
-                         'Bayar Lebih dari 1 Kali - 1 Struk (QRIS)',
-                         'Bayar 1 Kali - Banyak Struk (QRIS)',
-                         'Bayar Lebih dari 1 Kali - Banyak Struk (QRIS)',
-                         'Kurang Input (Ojol)']
+        kat_pengurang = ['Invoice Beda Hari', 'Transaksi Kemarin', 'Selisih IT', 'Promo Marketing/Adjustment', 'Cancel Nota', 'Tidak Ada Transaksi di Web', 'Selisih Lebih Bayar QRIS', 'Selisih Lebih Bayar Ojol', 'Salah Slot Pembayaran']
+        kat_diperiksa = ['Tidak Ada Invoice QRIS', 'Tidak Ada Invoice Ojol', 'Double Input', 'Selisih Kurang Bayar QRIS', 'Selisih Kurang Bayar Ojol', 'Bayar Lebih dari 1 Kali - 1 Struk (QRIS)', 'Bayar 1 Kali - Banyak Struk (QRIS)', 'Bayar Lebih dari 1 Kali - Banyak Struk (QRIS)', 'Kurang Input (Ojol)']
         df_breakdown['Kategori'] = df_breakdown['Kategori'].str.upper()
 
         df_breakdown.columns = df_breakdown.columns[:-7].to_list() + ['GO RESTO', 'GRAB FOOD', 'QRIS SHOPEE', 'QRIS TELKOM/ESB', 'SHOPEEPAY'] + df_breakdown.columns[-2:].to_list()
@@ -131,10 +109,11 @@ def process_data(all_cab, bulan):
             df_merge_final = df_merge_final.reset_index().fillna(0)
             df_merge_final.loc[len(df_merge_final)] = ['SELISIH',
                                            df_merge_final.iloc[0, 1] - df_merge_final.iloc[1, 1],
-                                          df_merge_final.iloc[0, 2] - df_merge_final.iloc[1, 2],
-                                          df_merge_final.iloc[0, 3] - df_merge_final.iloc[1, 3],
-                                          df_merge_final.iloc[0, 4] - df_merge_final.iloc[1, 4],
-                                          df_merge_final.iloc[0, 5] - df_merge_final.iloc[1, 5]]
+                                           df_merge_final.iloc[0, 2] - df_merge_final.iloc[1, 2],
+                                           df_merge_final.iloc[0, 3] - df_merge_final.iloc[1, 3],
+                                           df_merge_final.iloc[0, 4] - df_merge_final.iloc[1, 4],
+                                           df_merge_final.iloc[0, 5] - df_merge_final.iloc[1, 5]]
+            
             def highlight_last_row(x):
                 font_color = 'color: white;'
                 background_color = 'background-color: #FF4B4B;'
@@ -148,10 +127,8 @@ def process_data(all_cab, bulan):
                 return x
             
             df_merge_final = df_merge_final.applymap(format_number)
-            
             st.markdown(f'## {cab}')
             st.markdown('#### SELISIH PER-PAYMENT')
-            
             df_merge_final = df_merge_final.style.apply(highlight_last_row, axis=None)
             st.dataframe(df_merge_final, use_container_width=True, hide_index=True)
             
@@ -160,7 +137,7 @@ def process_data(all_cab, bulan):
             df_breakdown_pengurang.loc[len(df_breakdown_pengurang)] = ['TOTAL',
                                                                       df_breakdown_pengurang.iloc[:, 1].sum(),
                                                                       df_breakdown_pengurang.iloc[:, 2].sum(),
-                                                                      df_breakdown_pengurang.iloc[:, 3].                                                                      df_breakdown_pengurang.iloc[:, 3].sum(),
+                                                                      df_breakdown_pengurang.iloc[:, 3].sum(),
                                                                       df_breakdown_pengurang.iloc[:, 4].sum(),
                                                                       df_breakdown_pengurang.iloc[:, 5].sum()]
             df_breakdown_pengurang = df_breakdown_pengurang.applymap(format_number)
@@ -186,7 +163,7 @@ st.title('Dashboard - Selisih Ojol')
 col = st.columns(2)
 
 with col[0]:
-    all_cab = st.multiselect('Pilih Cabang', list_cab['CAB'].sort_values().unique())
+    all_cab = st.multiselect('Pilih Cabang', [])
     all_cab = list(all_cab)
 
 with col[1]:
@@ -211,17 +188,20 @@ if st.button("Process"):
     if os.path.exists(save_path):
         list_cab = load_excel(save_path)
         st.write("File loaded successfully")
+        all_cab = list_cab['CAB'].sort_values().unique()
     else:
         st.write("File does not exist")
 
 if st.button("Find") or st.session_state.button_clicked:
-    st.session_state.button_clicked = False
-    st.cache_data.clear()
-    st.cache_resource.clear()
+    if 'list_cab' not in globals() or list_cab.empty:
+        st.write("Please load the list of branches first by clicking 'Process'.")
+    else:
+        st.session_state.button_clicked = False
+        st.cache_data.clear()
+        st.cache_resource.clear()
     
-    # Process data
-    process_data(all_cab, bulan)
-    
-    st.cache_data.clear()
-    st.cache_resource.clear()
-
+        # Process data
+        process_data(all_cab, bulan)
+        
+        st.cache_data.clear()
+        st.cache_resource.clear()
