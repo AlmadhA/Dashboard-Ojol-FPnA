@@ -160,4 +160,68 @@ def process_data(all_cab, bulan):
             df_breakdown_pengurang.loc[len(df_breakdown_pengurang)] = ['TOTAL',
                                                                       df_breakdown_pengurang.iloc[:, 1].sum(),
                                                                       df_breakdown_pengurang.iloc[:, 2].sum(),
-                                                                      df_breakdown_pengurang.iloc[:, 3].
+                                                                      df_breakdown_pengurang.iloc[:, 3].                                                                      df_breakdown_pengurang.iloc[:, 3].sum(),
+                                                                      df_breakdown_pengurang.iloc[:, 4].sum(),
+                                                                      df_breakdown_pengurang.iloc[:, 5].sum()]
+            df_breakdown_pengurang = df_breakdown_pengurang.applymap(format_number)
+            df_breakdown_pengurang = df_breakdown_pengurang.style.apply(highlight_last_row, axis=None)
+            st.dataframe(df_breakdown_pengurang, use_container_width=True, hide_index=True)
+    
+            st.markdown('#### KATEGORI DIPERIKSA')
+            df_breakdown_diperiksa = df_breakdown2[df_breakdown2['Kategori'].isin([x.upper() for x in kat_diperiksa])].groupby('Kategori')[df_breakdown.columns[-7:-2]].sum().reset_index()
+            df_breakdown_diperiksa.loc[len(df_breakdown_diperiksa)] = ['TOTAL',
+                                                                      df_breakdown_diperiksa.iloc[:, 1].sum(),
+                                                                      df_breakdown_diperiksa.iloc[:, 2].sum(),
+                                                                      df_breakdown_diperiksa.iloc[:, 3].sum(),
+                                                                      df_breakdown_diperiksa.iloc[:, 4].sum(),
+                                                                      df_breakdown_diperiksa.iloc[:, 5].sum()]
+            df_breakdown_diperiksa = df_breakdown_diperiksa.applymap(format_number)
+            df_breakdown_diperiksa = df_breakdown_diperiksa.style.apply(highlight_last_row, axis=None)
+            st.dataframe(df_breakdown_diperiksa, use_container_width=True, hide_index=True)
+            st.markdown('---')
+
+# Main Streamlit app code
+st.title('Dashboard - Selisih Ojol')
+
+col = st.columns(2)
+
+with col[0]:
+    all_cab = st.multiselect('Pilih Cabang', list_cab['CAB'].sort_values().unique())
+    all_cab = list(all_cab)
+
+with col[1]:
+    all_bulan = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+    bulan = st.selectbox('Pilih Bulan', all_bulan)
+
+if "button_clicked" not in st.session_state:
+    st.session_state.button_clicked = False
+
+def process_callback():
+    st.session_state.button_clicked = True
+
+if st.button("Process"):
+    # Download data
+    url = 'https://raw.githubusercontent.com/Analyst-FPnA/Dashboard-OJOL/main/list_cab.xlsx'
+    save_path = 'list_cab.xlsx'
+    download_file_from_github(url, save_path)
+
+    if os.path.exists(save_path):
+        list_cab = load_excel(save_path)
+        st.write("File loaded successfully")
+    else:
+        st.write("File does not exist")
+
+if st.button("Find") or st.session_state.button_clicked:
+    st.session_state.button_clicked = False
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    
+    # Process data
+    process_data(all_cab, bulan)
+    
+    st.cache_data.clear()
+    st.cache_resource.clear()
+
